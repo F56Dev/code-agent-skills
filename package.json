@@ -1,0 +1,10 @@
+{
+  "name": "opencode-skills",
+  "version": "0.1.0",
+  "description": "个人 opencode skill 合集：vision-handoff（图片委派：全图详述 / 局部凝视 / 多图对比）",
+  "license": "MIT",
+  "opencode": {
+    "skills": ["skills/vision-handoff"],
+    "agents": ["agents/vision.md"]
+  }
+}
