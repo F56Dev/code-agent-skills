@@ -27,8 +27,13 @@ description: >-
 
 1. 调用 `task` 工具（`subagent_type: "docs-review"`）：
    - `description`: 简短语（如 "review sprint plan"）
-   - `prompt`: 待审文档**绝对路径** + 审查范围（核对测试数/模块路径/物理公式/完成状态/全面）+ 背景上下文
-2. `docs-review` 返回结构化审查报告（发现按严重度分级，每条带 `文件:行号` 证据）。
+   - `prompt`: 待审文档**绝对路径** + **聚焦的审查清单（2-4 项，禁止"全面审查"）** + 项目根目录
+2. **范围控制（关键，防止 subagent 空返回）**：
+   - **禁止**写"全面审查 / 全部核对 / 逐条验证"这类开放范围——subagent 会无限读代码、跑长程、超限静默失败返回空。
+   - **必须**让主 agent 先自己想清楚"这份文档最容易出错的是什么"，提炼成 2-4 个聚焦问题交给 subagent 查证。
+   - 涉及"核对测试数/模块路径"这类事实时，直接给出预期值（如"文档声称 1531 测试，请核实"），让 subagent 只查证这一条，而不是自己漫游。
+   - 若发现 subagent 空返回，重新委派时把范围切得更小（一次只查 1-2 个点）。
+3. `docs-review` 返回结构化审查报告（发现按严重度分级，每条带 `文件:行号` 证据）。
 
 ## 三级裁决 + 商讨回环（核心协议）
 
@@ -61,10 +66,22 @@ R3: 仍未一致的 → 升到人工（两边立场 + 证据并排）
 ```
 task(
   subagent_type: "docs-review",
-  description: "review phase10 plan",
-  prompt: "请审查 D:\\my code\\phi_emu\\docs\\superpowers\\2026-08-01-PHASE10-SPRINT-B.md。
-  审查范围：1) 与当前代码的漂移（测试数/模块路径/接口） 2) 物理公式正确性
-  3) 边界测试覆盖 4) 内部矛盾。项目根目录 D:\\my code\\phi_emu，宪法文档在 docs\\superpowers\\。"
+  description: "verify plan test count",
+  prompt: "请审查 D:\\my code\\phi_emu\\docs\\superpowers\\2026-08-01-PHASE10-SPRINT-B.md 的**一个点**：
+  文档第 5 行声称基线 1461 测试 / 134 文件。请只核实这一条：
+  在 D:\\my code\\phi_emu 下数 src/**/*.test.ts 文件数和 npm test 输出的测试数，报告实际值。
+  项目根目录 D:\\my code\\phi_emu。不要审查其他内容。"
+)
+
+# 聚焦版（2-4 项清单，替代"全面审查"）
+task(
+  subagent_type: "docs-review",
+  description: "review phase10 plan (focused)",
+  prompt: "请审查 D:\\my code\\phi_emu\\docs\\superpowers\\2026-08-01-PHASE10-SPRINT-B.md，只查以下 3 点：
+  1) 文档声称 env.G 默认 0——请 grep src/physics/domain-types.ts 确认
+  2) 文档说 contributeEquations 签名含 connections? 参数——读 domain-types.ts 确认
+  3) 第 3 节是否有自相矛盾（冲刺归属）
+  项目根目录 D:\\my code\\phi_emu，宪法文档在 docs\\superpowers\\。只查这 3 点，不要扩大范围。"
 )
 ```
 
